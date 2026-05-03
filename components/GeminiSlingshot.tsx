@@ -900,23 +900,10 @@ const GeminiSlingshot: React.FC = () => {
   const recColorConfig = aiRecommendedColor ? COLOR_CONFIG[aiRecommendedColor] : null;
   const borderColor = recColorConfig ? recColorConfig.hex : '#444746';
 
-  return (
+return (
     <div className="flex w-full h-screen bg-[#121212] overflow-hidden font-roboto text-[#e3e3e3]">
       
-      {/* MOBILE/TABLET BLOCKER OVERLAY */}
-      <div className="fixed inset-0 z-[100] bg-[#121212] flex flex-col items-center justify-center p-8 text-center md:hidden">
-         <Monitor className="w-16 h-16 text-[#ef5350] mb-6 animate-pulse" />
-         <h2 className="text-2xl font-bold text-[#e3e3e3] mb-4">Desktop View Required</h2>
-         <p className="text-[#c4c7c5] max-w-md text-lg leading-relaxed">
-           This experience requires a larger screen for the webcam tracking and game mechanics.
-         </p>
-         <div className="mt-8 flex items-center gap-2 text-sm text-[#757575] uppercase tracking-wider font-bold">
-           <div className="w-2 h-2 bg-[#42a5f5] rounded-full"></div>
-           Please maximize window
-         </div>
-      </div>
-
-      {/* LEFT: Game Area */}
+       {/* LEFT: Game Area */}
       <div ref={gameContainerRef} className="flex-1 relative h-full overflow-hidden">
         <video ref={videoRef} className="absolute hidden" playsInline />
         <canvas ref={canvasRef} className="absolute inset-0" />
@@ -1008,178 +995,53 @@ const GeminiSlingshot: React.FC = () => {
         )}
       </div>
 
-      {/* RIGHT: Debug Panel */}
-      <div className="w-[380px] bg-[#1e1e1e] border-l border-[#444746] flex flex-col h-full overflow-hidden shadow-2xl">
-        
-        {/* FLASH STRATEGY SECTION - PROMINENT */}
-        <div 
-            className="p-5 border-b-4 transition-colors duration-500 flex flex-col gap-2"
-            style={{ 
-                backgroundColor: '#252525',
-                borderColor: borderColor
-            }}
-        >
-             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <BrainCircuit className="w-5 h-5" style={{ color: borderColor }} />
-                    <h2 className="font-bold text-sm tracking-widest uppercase" style={{ color: borderColor }}>
-                        Pro Strategy
-                    </h2>
-                </div>
-                {isAiThinking && <Loader2 className="w-4 h-4 animate-spin text-white/50" />}
-             </div>
-             
-             <p className="text-[#e3e3e3] text-sm leading-relaxed font-bold">
-                {aiHint}
-             </p>
-             
-             {aiRationale && (
-                 <div className="flex gap-2 mt-1">
-                     <Lightbulb className="w-4 h-4 text-[#a8c7fa] shrink-0 mt-0.5" />
-                     <p className="text-[#a8c7fa] text-xs italic opacity-90 leading-tight">
-                        {aiRationale}
-                     </p>
+         {/* RIGHT: Strategy Panel */}
+         <div className="w-[380px] bg-[#1e1e1e] border-l border-[#444746] flex flex-col h-full overflow-hidden shadow-2xl">
+         
+         {/* STRATEGY SECTION */}
+         <div 
+             className="p-5 border-b-4 transition-colors duration-500 flex flex-col gap-2"
+             style={{ 
+                 backgroundColor: '#252525',
+                 borderColor: borderColor
+             }}
+         >
+              <div className="flex items-center justify-between">
+                 <div className="flex items-center gap-2">
+                     <BrainCircuit className="w-5 h-5" style={{ color: borderColor }} />
+                     <h2 className="font-bold text-sm tracking-widest uppercase" style={{ color: borderColor }}>
+                         Strategy
+                     </h2>
                  </div>
-             )}
-             
-             {aiRecommendedColor && (
-                <div className="flex items-center gap-2 mt-3 bg-black/20 p-2 rounded">
-                    <Target className="w-4 h-4 text-gray-400" />
-                    <span className="text-xs text-gray-400 uppercase tracking-wide">Rec. Color:</span>
-                    <span className="text-xs font-bold uppercase" style={{ color: COLOR_CONFIG[aiRecommendedColor].hex }}>
-                        {COLOR_CONFIG[aiRecommendedColor].label}
-                    </span>
-                </div>
-             )}
-        </div>
-
-        {/* DEBUG HEADER */}
-        <div className="p-3 border-b border-[#444746] bg-[#1e1e1e] flex items-center gap-2 text-[#757575]">
-            <Terminal className="w-4 h-4" />
-            <span className="text-[10px] font-bold uppercase tracking-wider">Debugger</span>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
-            
-            {/* Status Section */}
-            <div>
-                <div className="flex items-center gap-2 mb-2 text-[#c4c7c5] text-xs font-bold uppercase tracking-wider">
-                    <BrainCircuit className="w-3 h-3" /> Status
-                </div>
-                <div className={`p-3 rounded-lg border ${isAiThinking ? 'bg-[#a8c7fa]/10 border-[#a8c7fa]/30 text-[#a8c7fa]' : 'bg-[#444746]/20 border-[#444746]/50 text-[#c4c7c5]'}`}>
-                    <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${isAiThinking ? 'bg-[#a8c7fa] animate-pulse' : 'bg-[#66bb6a]'}`} />
-                        <span className="text-sm font-mono">{isAiThinking ? 'Processing Vision...' : 'Waiting for Input'}</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Vision Input */}
-            {debugInfo?.screenshotBase64 && (
-                <div>
-                    <div className="flex items-center gap-2 mb-2 text-[#c4c7c5] text-xs font-bold uppercase tracking-wider">
-                        <Eye className="w-3 h-3" /> Vision Input
-                    </div>
-                    <div className="rounded-lg overflow-hidden border border-[#444746] bg-black/50 relative group">
-                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={debugInfo.screenshotBase64} alt="AI Vision" className="w-full h-auto opacity-80 group-hover:opacity-100 transition-opacity" />
-                        <div className="absolute bottom-0 left-0 right-0 bg-black/70 p-1 text-[10px] text-center text-gray-400 font-mono">
-                            Sent to gemini-3.1-pro
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Prompt Context */}
-            {debugInfo?.promptContext && (
-                <div>
-                    <div className="flex items-center gap-2 mb-2 text-[#c4c7c5] text-xs font-bold uppercase tracking-wider">
-                        <Terminal className="w-3 h-3" /> Prompt Context
-                    </div>
-                    <div className="bg-[#121212] p-3 rounded-lg border border-[#444746] font-mono text-[10px] text-gray-400 h-32 overflow-y-auto whitespace-pre-wrap leading-tight">
-                        {debugInfo.promptContext}
-                    </div>
-                </div>
-            )}
-
-            {/* AI Output Stats */}
-            {debugInfo && (
-                <div>
-                    <div className="flex items-center gap-2 mb-2 text-[#c4c7c5] text-xs font-bold uppercase tracking-wider">
-                        <BrainCircuit className="w-3 h-3" /> AI Output
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-2 mb-3">
-                         <div className="bg-[#2a2a2a] p-2 rounded border border-[#444746]">
-                            <p className="text-[10px] text-gray-500 mb-1">Latency</p>
-                            <div className="flex items-center gap-1 text-[#a8c7fa] font-mono font-bold">
-                                {debugInfo.latency}ms
-                            </div>
-                         </div>
-                         <div className="bg-[#2a2a2a] p-2 rounded border border-[#444746]">
-                            <p className="text-[10px] text-gray-500 mb-1">Rec. Color</p>
-                            <div className="flex items-center gap-1 text-[#e3e3e3] font-mono font-bold capitalize">
-                                {debugInfo.parsedResponse?.recommendedColor || '--'}
-                            </div>
-                         </div>
-                    </div>
-
-                    {debugInfo.error && (
-                         <div className="bg-[#ef5350]/10 border border-[#ef5350]/30 p-3 rounded-lg mb-3">
-                            <div className="flex items-start gap-2 text-[#ef5350]">
-                                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-                                <div>
-                                    <p className="text-xs font-bold">PARSE ERROR DETAILS</p>
-                                    <p className="text-[10px] font-mono mt-1 break-all">{debugInfo.error}</p>
-        </div>
-        
-        {/* Combo Meter */}
-        {comboCountRef.current > 1 && (
-          <div className="absolute top-24 left-6 z-40">
-            <div className="bg-[#1e1e1e] px-4 py-3 rounded-[20px] border border-[#ffaa00]/50 shadow-2xl">
-              <div className="flex items-center gap-2">
-                <Flame className="w-5 h-5 text-[#ffaa00] animate-pulse" />
-                <span className="text-[#ffaa00] font-bold text-lg">{comboCountRef.current}x COMBO</span>
+                 {isAiThinking && <Loader2 className="w-4 h-4 animate-spin text-white/50" />}
               </div>
-              <div className="mt-2 w-32 h-2 bg-[#333] rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-[#ffaa00] to-[#ff6b00] transition-all duration-300"
-                  style={{ width: `${Math.min((comboCountRef.current / 10) * 100, 100)}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {/* Achievement Popup */}
-        {newAchievement && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] animate-bounce">
-            <div className="bg-[#1e1e1e] px-8 py-6 rounded-2xl border-2 border-[#ffaa00] shadow-2xl text-center">
-              <div className="text-6xl mb-2">{newAchievement.icon}</div>
-              <p className="text-[#ffaa00] font-bold text-xl">ACHIEVEMENT UNLOCKED!</p>
-              <p className="text-white font-bold text-2xl mt-1">{newAchievement.title}</p>
-            </div>
-          </div>
-        )}
-                            </div>
-                         </div>
-                    )}
-
-                    <p className="text-[10px] text-gray-500 mb-1">Raw Response Text</p>
-                    <div className="bg-[#121212] p-3 rounded-lg border border-[#444746] font-mono text-[11px] text-[#66bb6a] max-h-40 overflow-y-auto whitespace-pre-wrap mb-3 border-l-2 border-l-[#66bb6a]">
-                        {debugInfo.rawResponse}
-                    </div>
-
-                    <p className="text-[10px] text-gray-500 mb-1">Parsed JSON</p>
-                    <div className="bg-[#121212] p-3 rounded-lg border border-[#444746] font-mono text-[10px] text-[#a8c7fa] overflow-x-auto">
-                        <pre>{JSON.stringify(debugInfo.parsedResponse || { error: "Failed to parse" }, null, 2)}</pre>
-                    </div>
-                </div>
-            )}
-        </div>
-      </div>
-    </div>
-  );
+              
+              <p className="text-[#e3e3e3] text-sm leading-relaxed font-bold">
+                 {aiHint}
+              </p>
+              
+              {aiRationale && (
+                  <div className="flex gap-2 mt-1">
+                      <Lightbulb className="w-4 h-4 text-[#a8c7fa] shrink-0 mt-0.5" />
+                      <p className="text-[#a8c7fa] text-xs italic opacity-90 leading-tight">
+                         {aiRationale}
+                      </p>
+                  </div>
+              )}
+              
+              {aiRecommendedColor && (
+                 <div className="flex items-center gap-2 mt-3 bg-black/20 p-2 rounded">
+                     <Target className="w-4 h-4 text-gray-400" />
+                     <span className="text-xs text-gray-400 uppercase tracking-wide">Target:</span>
+                     <span className="text-xs font-bold uppercase" style={{ color: COLOR_CONFIG[aiRecommendedColor].hex }}>
+                         {COLOR_CONFIG[aiRecommendedColor].label}
+                     </span>
+                 </div>
+              )}
+         </div>
+       </div>
+     </div>
+   );
 };
 
 export default GeminiSlingshot;
