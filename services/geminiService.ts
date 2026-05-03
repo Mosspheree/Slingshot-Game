@@ -29,12 +29,11 @@ export interface TargetCandidate {
 
 export const getStrategicHint = async (
   imageBase64: string,
-  validTargets: TargetCandidate[], // Now contains candidates for ALL colors
+  validTargets: TargetCandidate[],
   dangerRow: number
 ): Promise<AiResponse> => {
   const startTime = performance.now();
   
-  // Default debug info container
   const debug: DebugInfo = {
     latency: 0,
     screenshotBase64: imageBase64, // Keep the raw input for display
@@ -50,7 +49,6 @@ export const getStrategicHint = async (
     };
   }
 
-  // Local Heuristic Fallback
   const getBestLocalTarget = (msg: string = "No clear shots—play defensively."): StrategicHint => {
     if (validTargets.length > 0) {
         // Sort by Total Potential Score (Size * Value) then Height
