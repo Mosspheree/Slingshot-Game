@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --cyber-dark: #0a0a0f;
+  --cyber-panel: #121218;
+  --cyber-accent: #00f0ff;
+  --cyber-secondary: #ff00aa;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: var(--cyber-dark);
+  color: #e3e3e3;
+  overflow: hidden;
+  font-family: 'Roboto', sans-serif;
+}
+
+h1, h2, h3, .font-display {
+  font-family: 'Orbitron', sans-serif;
+}
+
+canvas {
+  transform: scaleX(-1);
+}
+
+video {
+  transform: scaleX(-1);
+  display: none;
+}
+
+.glow-accent {
+  box-shadow: 0 0 20px var(--cyber-accent), 0 0 40px rgba(0, 240, 255, 0.3);
+}
+
+.glow-secondary {
+  box-shadow: 0 0 20px var(--cyber-secondary), 0 0 40px rgba(255, 0, 170, 0.3);
+}
