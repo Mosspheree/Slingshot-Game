@@ -49,6 +49,10 @@ const adjustColor = (color: string, amount: number) => {
     return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 };
 
+// MediaPipe Globals to prevent strict-mode crashes
+let globalHands: any = null;
+let globalCamera: any = null;
+
 const GeminiSlingshot: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -403,9 +407,6 @@ const GeminiSlingshot: React.FC = () => {
     ballPos.current = { ...anchorPos.current };
     
     initGrid(canvas.width);
-
-    let camera: any = null;
-    let hands: any = null;
 
     const onResults = (results: any) => {
       setLoading(false);
@@ -769,31 +770,37 @@ const GeminiSlingshot: React.FC = () => {
     };
 
     if (window.Hands) {
-      hands = new window.Hands({
-        locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
-      });
-      hands.setOptions({
-        maxNumHands: 1,
-        modelComplexity: 1,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5,
-      });
-      hands.onResults(onResults);
+      if (!globalHands) {
+        globalHands = new window.Hands({
+          locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+        });
+        globalHands.setOptions({
+          maxNumHands: 1,
+          modelComplexity: 1,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5,
+        });
+      }
+      globalHands.onResults(onResults);
+      
       if (window.Camera) {
-        camera = new window.Camera(video, {
+        if (globalCamera) {
+          globalCamera.stop();
+        }
+        globalCamera = new window.Camera(video, {
           onFrame: async () => {
-            if (videoRef.current && hands) await hands.send({ image: videoRef.current });
+            if (videoRef.current && globalHands) await globalHands.send({ image: videoRef.current });
           },
           width: 1280,
           height: 720,
         });
-        camera.start();
+        globalCamera.start();
       }
     }
 
     return () => {
-        if (camera) camera.stop();
-        if (hands) hands.close();
+        if (globalCamera) globalCamera.stop();
+        // Do NOT close hands to avoid Emscripten WASM abort error during React StrictMode dev
     };
   }, [initGrid]);
 
