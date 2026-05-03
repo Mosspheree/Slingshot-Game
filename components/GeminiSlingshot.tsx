@@ -5,8 +5,9 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { getStrategicHint, TargetCandidate } from '../services/geminiService';
+import { soundManager, createScorePopup, getHighScores, saveHighScore, COMBO_THRESHOLD_MS } from '../services/soundManager';
 import { Point, Bubble, Particle, BubbleColor, DebugInfo } from '../types';
-import { Loader2, Trophy, BrainCircuit, Play, MousePointerClick, Eye, Terminal, Clock, AlertTriangle, Target, Lightbulb, Monitor } from 'lucide-react';
+import { Loader2, Trophy, BrainCircuit, Play, MousePointerClick, Eye, Terminal, Clock, AlertTriangle, Target, Lightbulb, Monitor, Medal, Volume2, VolumeX, RefreshCw } from 'lucide-react';
 
 const PINCH_THRESHOLD = 0.05;
 const GRAVITY = 0.0; 
@@ -68,6 +69,13 @@ const GeminiSlingshot: React.FC = () => {
   const bubbles = useRef<Bubble[]>([]);
   const particles = useRef<Particle[]>([]);
   const scoreRef = useRef<number>(0);
+  const comboCountRef = useRef(0);
+  const comboMultiplierRef = useRef(1);
+  const lastPopTimeRef = useRef(0);
+  
+  const scorePopupsRef = useRef<{id: string; x: number; y: number; text: string; value: number; color: string; scale: number; opacity: number; createdAt: number}[]>([]);
+  
+  const [soundEnabled, setSoundEnabled] = useState(true);
   
   const aimTargetRef = useRef<Point | null>(null);
   const isAiThinkingRef = useRef<boolean>(false);
@@ -89,6 +97,13 @@ const GeminiSlingshot: React.FC = () => {
   const [availableColors, setAvailableColors] = useState<BubbleColor[]>([]);
   const [aiRecommendedColor, setAiRecommendedColor] = useState<BubbleColor | null>(null);
   const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
+  const [highScores, setHighScores] = useState<{score: number; date: string}[]>([]);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+
+  // Load high scores on mount
+  useEffect(() => {
+    setHighScores(getHighScores());
+  }, []);
 
   // Sync state to ref
   useEffect(() => {
