@@ -1,6 +1,6 @@
-# Gemini Slingshot: AI Co-Pilot
+# Slingshot: AI Co-Pilot
 
-Gemini Slingshot is an interactive, webcam-powered bubble shooter that leverages MediaPipe hand-tracking to let players aim and shoot with intuitive physical gestures. It integrates Gemini 3.1 Pro as a strategic AI co-pilot, visually analyzing the live board state to deliver personalized, proactive shot recommendations, high-scoring synergies, and survival strategies.
+Slingshot is an interactive, webcam-powered bubble shooter that leverages MediaPipe hand-tracking to let players aim and shoot with intuitive physical gestures. It integrates Gemini 3.1 Pro as a strategic AI co-pilot, visually analyzing the live board state to deliver personalized, proactive shot recommendations, high-scoring synergies, and survival strategies.
 
 ## Architecture
 
