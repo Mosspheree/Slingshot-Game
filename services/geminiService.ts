@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
-*/
+ */
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { StrategicHint, AiResponse, DebugInfo } from "../types";
@@ -11,8 +11,6 @@ let ai: GoogleGenAI | null = null;
 
 if (process.env.API_KEY) {
     ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-} else {
-    console.error("API_KEY is missing from environment variables.");
 }
 
 const MODEL_NAME = "gemini-3.1-pro-preview";
@@ -32,41 +30,20 @@ export const getStrategicHint = async (
   validTargets: TargetCandidate[],
   dangerRow: number
 ): Promise<AiResponse> => {
+  
+  // If no API key, use local strategy
+  if (!ai) {
+    return getLocalStrategy(validTargets, dangerRow);
+  }
+
   const startTime = performance.now();
   
   const debug: DebugInfo = {
     latency: 0,
-    screenshotBase64: imageBase64, // Keep the raw input for display
+    screenshotBase64: imageBase64,
     promptContext: "",
     rawResponse: "",
     timestamp: new Date().toLocaleTimeString()
-  };
-
-  if (!ai) {
-    return {
-        hint: { message: "API Key missing." },
-        debug: { ...debug, error: "API Key Missing" }
-    };
-  }
-
-  const getBestLocalTarget = (msg: string = "No clear shots—play defensively."): StrategicHint => {
-    if (validTargets.length > 0) {
-        // Sort by Total Potential Score (Size * Value) then Height
-        const best = validTargets.sort((a,b) => {
-            const scoreA = a.size * a.pointsPerBubble;
-            const scoreB = b.size * b.pointsPerBubble;
-            return (scoreB - scoreA) || (a.row - b.row);
-        })[0];
-        
-        return {
-            message: `Fallback: Select ${best.color.toUpperCase()} at Row ${best.row}`,
-            rationale: "Selected based on highest potential cluster score available locally.",
-            targetRow: best.row,
-            targetCol: best.col,
-            recommendedColor: best.color as any
-        };
-    }
-    return { message: msg, rationale: "No valid clusters found to target." };
   };
 
   const hasDirectTargets = validTargets.length > 0;
@@ -112,7 +89,6 @@ export const getStrategicHint = async (
   `;
 
   try {
-    // Strip the data:image/png;base64, prefix if present
     const cleanBase64 = imageBase64.replace(/^data:image\/(png|jpeg|jpg);base64,/, "");
 
     const response = await ai.models.generateContent({
@@ -130,7 +106,7 @@ export const getStrategicHint = async (
       },
       config: {
         maxOutputTokens: 2048,
-        temperature: 0.2, // Lower temperature for more strategic/analytical reasoning
+        temperature: 0.2,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -152,14 +128,12 @@ export const getStrategicHint = async (
     let text = response.text || "{}";
     debug.rawResponse = text;
     
-    // Robust JSON Extraction: 
-    // Isolate the substring between the first '{' and the last '}'
     const firstBrace = text.indexOf('{');
     const lastBrace = text.lastIndexOf('}');
 
     if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
         text = text.substring(firstBrace, lastBrace + 1);
-    } 
+    }
 
     try {
         const json = JSON.parse(text);
@@ -201,4 +175,76 @@ export const getStrategicHint = async (
         debug: { ...debug, error: error.message || "Unknown API Error" }
     };
   }
+  
+  function getBestLocalTarget(msg: string = "No clear shots—play defensively."): StrategicHint {
+    if (validTargets.length > 0) {
+        const best = validTargets.sort((a,b) => {
+            const scoreA = a.size * a.pointsPerBubble;
+            const scoreB = b.size * b.pointsPerBubble;
+            return (scoreB - scoreA) || (a.row - b.row);
+        })[0];
+        
+        return {
+            message: `Fallback: Select ${best.color.toUpperCase()} at Row ${best.row}`,
+            rationale: "Selected based on highest potential cluster score available locally.",
+            targetRow: best.row,
+            targetCol: best.col,
+            recommendedColor: best.color as any
+        };
+    }
+    return { message: msg, rationale: "No valid clusters found to target." };
+  }
+};
+
+// Local strategy when no API key exists
+const getLocalStrategy = (validTargets: TargetCandidate[], dangerRow: number): AiResponse => {
+  const hasTargets = validTargets.length > 0;
+  let message = "Pinch & Pull to Shoot!";
+  let rationale = "Aim for clusters of 3+ matching bubbles";
+  let targetRow = -1;
+  let targetCol = -1;
+  let recommendedColor = 'red' as 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'orange';
+  
+  if (hasTargets) {
+    const sorted = [...validTargets].sort((a, b) => {
+      const scoreA = a.size * a.pointsPerBubble;
+      const scoreB = b.size * b.pointsPerBubble;
+      return scoreB - scoreA || a.row - b.row;
+    });
+    
+    const best = sorted[0];
+    recommendedColor = best.color as 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'orange';
+    targetRow = best.row;
+    targetCol = best.col;
+    
+    if (dangerRow >= 6) {
+      message = `DANGER! Target ${best.color.toUpperCase()} to survive`;
+      rationale = "Bubbles are near the bottom - clear them fast!";
+    } else if (best.size >= 3) {
+      message = `Great shot! Target ${best.color.toUpperCase()} cluster`;
+      rationale = `Clearing ${best.size} bubbles with ${best.pointsPerBubble} pts each`;
+    } else {
+      message = `Target ${best.color.toUpperCase()} at Row ${best.row}`;
+      rationale = "Building towards a bigger match";
+    }
+  } else {
+    message = "No clear matches - play defensively";
+    rationale = "Shoot any color to set up future combos";
+  }
+  
+  return {
+    hint: {
+      message,
+      rationale,
+      targetRow,
+      targetCol,
+      recommendedColor
+    },
+    debug: {
+      latency: 0,
+      promptContext: hasTargets ? validTargets.map(t => `${t.color} x${t.size}`).join(', ') : "No targets",
+      rawResponse: "Local strategy (no API)",
+      timestamp: new Date().toLocaleTimeString()
+    }
+  };
 };

@@ -6,8 +6,9 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { getStrategicHint, TargetCandidate } from '../services/geminiService';
 import { soundManager, createScorePopup, getHighScores, saveHighScore, COMBO_THRESHOLD_MS } from '../services/soundManager';
+import { checkAchievements, getAchievements, saveAchievements, ACHIEVEMENTS } from '../services/achievements';
 import { Point, Bubble, Particle, BubbleColor, DebugInfo } from '../types';
-import { Loader2, Trophy, BrainCircuit, Play, MousePointerClick, Eye, Terminal, Clock, AlertTriangle, Target, Lightbulb, Monitor, Medal, Volume2, VolumeX, RefreshCw } from 'lucide-react';
+import { Loader2, Trophy, BrainCircuit, Play, MousePointerClick, Eye, Terminal, Clock, AlertTriangle, Target, Lightbulb, Monitor, Medal, Volume2, VolumeX, RefreshCw, Award, Zap, Flame } from 'lucide-react';
 
 const PINCH_THRESHOLD = 0.05;
 const GRAVITY = 0.0; 
@@ -99,10 +100,16 @@ const GeminiSlingshot: React.FC = () => {
   const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
   const [highScores, setHighScores] = useState<{score: number; date: string}[]>([]);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [achievements, setAchievements] = useState<string[]>([]);
+  const [newAchievement, setNewAchievement] = useState<{title: string; icon: string} | null>(null);
+  const [screenShake, setScreenShake] = useState(0);
+  const [bubblesPopped, setBubblesPopped] = useState(0);
+  const [usedRainbow, setUsedRainbow] = useState(false);
 
-  // Load high scores on mount
+  // Load high scores and achievements on mount
   useEffect(() => {
     setHighScores(getHighScores());
+    setAchievements(getAchievements());
   }, []);
 
   // Sync state to ref
@@ -308,15 +315,74 @@ const GeminiSlingshot: React.FC = () => {
       let points = 0;
       const basePoints = COLOR_CONFIG[targetColor].points;
       
+      // Combo system
+      const now = Date.now();
+      const timeSinceLastPop = now - lastPopTimeRef.current;
+      const isCombo = timeSinceLastPop < COMBO_THRESHOLD_MS && comboCountRef.current > 0;
+      
+      if (isCombo) {
+        comboCountRef.current += 1;
+        comboMultiplierRef.current = Math.min(1 + (comboCountRef.current * 0.25), 3);
+      } else {
+        comboCountRef.current = 1;
+        comboMultiplierRef.current = 1;
+      }
+      lastPopTimeRef.current = now;
+      
       matches.forEach(b => {
         b.active = false;
         createExplosion(b.x, b.y, COLOR_CONFIG[b.color].hex);
+        if (soundEnabled) soundManager.playPop(b.color);
         points += basePoints;
       });
-      // Combo Multiplier
-      const multiplier = matches.length > 3 ? 1.5 : 1.0;
-      scoreRef.current += Math.floor(points * multiplier);
+      
+      // Screen shake for big combos
+      if (matches.length > 4 || comboCountRef.current >= 3) {
+        setScreenShake(10);
+        setTimeout(() => setScreenShake(0), 300);
+      }
+      
+      // Apply combo multiplier
+      const multiplier = (isCombo ? comboMultiplierRef.current : 1) * (matches.length > 3 ? 1.5 : 1.0);
+      const finalPoints = Math.floor(points * multiplier);
+      scoreRef.current += finalPoints;
       setScore(scoreRef.current);
+      
+      // Update bubbles popped count
+      setBubblesPopped(prev => {
+        const newCount = prev + matches.length;
+        return newCount;
+      });
+      
+      // Check achievements
+      const { newAchievements, allAchievements } = checkAchievements(
+        scoreRef.current,
+        comboCountRef.current,
+        bubblesPopped + matches.length,
+        usedRainbow,
+        achievements
+      );
+      
+      if (newAchievements.length > 0) {
+        const latest = newAchievements[newAchievements.length - 1];
+        setNewAchievement({ title: latest.title, icon: latest.icon });
+        setAchievements(prev => [...prev, latest.id]);
+        saveAchievements([...achievements, latest.id]);
+        setTimeout(() => setNewAchievement(null), 3000);
+      }
+      
+      // Create score popup
+      if (isCombo && soundEnabled) {
+        soundManager.playCombo(comboCountRef.current);
+      }
+      scorePopupsRef.current.push(createScorePopup(
+        startBubble.x,
+        startBubble.y,
+        finalPoints,
+        COLOR_CONFIG[targetColor].hex,
+        isCombo
+      ));
+      
       return true;
     }
     return false;
@@ -437,6 +503,12 @@ const GeminiSlingshot: React.FC = () => {
       }
 
       ctx.save();
+      // Screen shake effect
+      if (screenShake > 0) {
+        const shakeX = (Math.random() - 0.5) * screenShake * 2;
+        const shakeY = (Math.random() - 0.5) * screenShake * 2;
+        ctx.translate(shakeX, shakeY);
+      }
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
       // Draw Video Feed
@@ -714,7 +786,13 @@ const GeminiSlingshot: React.FC = () => {
       if (isLocked && !isFlying.current) {
           ctx.globalAlpha = 0.5;
       }
+      
+      // Neon glow effect
+      ctx.shadowColor = COLOR_CONFIG[selectedColorRef.current].hex;
+      ctx.shadowBlur = 20;
       drawBubble(ctx, ballPos.current.x, ballPos.current.y, BUBBLE_RADIUS, selectedColorRef.current);
+      ctx.shadowBlur = 0;
+      
       ctx.restore();
 
       // Slingshot Band (Front)
@@ -1053,7 +1131,36 @@ const GeminiSlingshot: React.FC = () => {
                                 <div>
                                     <p className="text-xs font-bold">PARSE ERROR DETAILS</p>
                                     <p className="text-[10px] font-mono mt-1 break-all">{debugInfo.error}</p>
-                                </div>
+        </div>
+        
+        {/* Combo Meter */}
+        {comboCountRef.current > 1 && (
+          <div className="absolute top-24 left-6 z-40">
+            <div className="bg-[#1e1e1e] px-4 py-3 rounded-[20px] border border-[#ffaa00]/50 shadow-2xl">
+              <div className="flex items-center gap-2">
+                <Flame className="w-5 h-5 text-[#ffaa00] animate-pulse" />
+                <span className="text-[#ffaa00] font-bold text-lg">{comboCountRef.current}x COMBO</span>
+              </div>
+              <div className="mt-2 w-32 h-2 bg-[#333] rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-[#ffaa00] to-[#ff6b00] transition-all duration-300"
+                  style={{ width: `${Math.min((comboCountRef.current / 10) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Achievement Popup */}
+        {newAchievement && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] animate-bounce">
+            <div className="bg-[#1e1e1e] px-8 py-6 rounded-2xl border-2 border-[#ffaa00] shadow-2xl text-center">
+              <div className="text-6xl mb-2">{newAchievement.icon}</div>
+              <p className="text-[#ffaa00] font-bold text-xl">ACHIEVEMENT UNLOCKED!</p>
+              <p className="text-white font-bold text-2xl mt-1">{newAchievement.title}</p>
+            </div>
+          </div>
+        )}
                             </div>
                          </div>
                     )}
