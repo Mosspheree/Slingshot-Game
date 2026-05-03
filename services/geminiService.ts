@@ -9,7 +9,12 @@ import { StrategicHint, AiResponse, DebugInfo } from "../types";
 // Initialize Gemini Client
 let ai: GoogleGenAI | null = null;
 
-if (process.env.API_KEY) {
+// Only enable AI if a REAL key is provided (not placeholder)
+const hasValidKey = process.env.API_KEY && 
+                      process.env.API_KEY !== 'your_api_key_here' && 
+                      process.env.API_KEY.length > 20;
+
+if (hasValidKey) {
     ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 }
 
@@ -31,10 +36,9 @@ export const getStrategicHint = async (
   dangerRow: number
 ): Promise<AiResponse> => {
   
-  // If no API key, use local strategy
-  if (!ai) {
-    return getLocalStrategy(validTargets, dangerRow);
-  }
+  // ALWAYS use local strategy - no API calls
+  return getLocalStrategy(validTargets, dangerRow);
+};
 
   const startTime = performance.now();
   
